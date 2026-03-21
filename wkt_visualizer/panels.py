@@ -106,6 +106,10 @@ class GeometryPanels(Gtk.Box):
         show_btn.connect("clicked", self._on_show_clicked)
         button_box.append(show_btn)
 
+        hide_all_btn = Gtk.Button(label="Hide All")
+        hide_all_btn.connect("clicked", self._on_hide_all_clicked)
+        button_box.append(hide_all_btn)
+
         show_all_btn = Gtk.Button(label="Show All")
         show_all_btn.connect("clicked", self._on_show_all_clicked)
         button_box.append(show_all_btn)
@@ -181,6 +185,13 @@ class GeometryPanels(Gtk.Box):
         entry, idx = self._get_selected_entry(self.hidden_list, self.hidden_store)
         if entry is not None:
             self._move_entry(self.hidden_store, self.displayed_store, idx)
+
+    def _on_hide_all_clicked(self, _btn):
+        while self.displayed_store.get_n_items() > 0:
+            entry = self.displayed_store.get_item(0)
+            self.displayed_store.remove(0)
+            self.hidden_store.append(entry)
+        self._on_visibility_changed()
 
     def _on_show_all_clicked(self, _btn):
         while self.hidden_store.get_n_items() > 0:

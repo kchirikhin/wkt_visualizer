@@ -82,7 +82,6 @@ class GeometryPanels(Gtk.Box):
         self.displayed_list = Gtk.ListBox()
         self.displayed_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.displayed_list.bind_model(displayed_store, _create_row_widget)
-        self.displayed_list.connect("row-activated", self._on_displayed_activated)
         self.displayed_list.connect("row-selected", self._on_displayed_selected)
 
         displayed_scroll = Gtk.ScrolledWindow()
@@ -123,7 +122,6 @@ class GeometryPanels(Gtk.Box):
         self.hidden_list = Gtk.ListBox()
         self.hidden_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.hidden_list.bind_model(hidden_store, _create_row_widget)
-        self.hidden_list.connect("row-activated", self._on_hidden_activated)
         self.hidden_list.connect("row-selected", self._on_hidden_selected)
 
         hidden_scroll = Gtk.ScrolledWindow()
@@ -149,11 +147,6 @@ class GeometryPanels(Gtk.Box):
 
     # -- Displayed list handlers --
 
-    def _on_displayed_activated(self, _listbox, row):
-        idx = row.get_index()
-        if idx >= 0:
-            self._move_entry(self.displayed_store, self.hidden_store, idx)
-
     def _on_displayed_selected(self, _listbox, row):
         if row is not None:
             self.hidden_list.unselect_all()
@@ -166,11 +159,6 @@ class GeometryPanels(Gtk.Box):
             self._on_selection_changed(None)
 
     # -- Hidden list handlers --
-
-    def _on_hidden_activated(self, _listbox, row):
-        idx = row.get_index()
-        if idx >= 0:
-            self._move_entry(self.hidden_store, self.displayed_store, idx)
 
     def _on_hidden_selected(self, _listbox, row):
         if row is not None:

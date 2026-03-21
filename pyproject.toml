@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "wkt-visualizer"
+version = "0.1.0"
+description = "Pipe-friendly WKT geometry visualizer with GTK 4 GUI"
+authors = []
+readme = "SPEC.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+PyGObject = "^3.42"
+pycairo = "^1.20"
+Shapely = "^2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+
+[tool.poetry.scripts]
+wkt-visualizer = "wkt_visualizer.__main__:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

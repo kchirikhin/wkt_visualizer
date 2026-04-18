@@ -65,15 +65,15 @@ def read_stdin() -> list[WktEntry]:
         line = line.rstrip("\n\r")
         stripped = line.lstrip()
 
-        # ## group header (must check before single #)
+        # ## entity name comment (must check before single #)
         if stripped.startswith("##"):
-            group_index += 1
-            current_group = stripped[2:].lstrip()
             prev_line = stripped
             continue
 
-        # # entity name comment
+        # # group header
         if stripped.startswith("#"):
+            group_index += 1
+            current_group = stripped[1:].lstrip()
             prev_line = stripped
             continue
 
@@ -82,10 +82,10 @@ def read_stdin() -> list[WktEntry]:
             prev_line = line
             continue
 
-        # Determine name from previous # comment
+        # Determine name from previous ## comment
         name = ""
-        if prev_line.startswith("#") and not prev_line.startswith("##"):
-            name = prev_line[1:].lstrip()
+        if prev_line.startswith("##"):
+            name = prev_line[2:].lstrip()
 
         geometry = shapely.from_wkt(wkt_str)
         entry = WktEntry(

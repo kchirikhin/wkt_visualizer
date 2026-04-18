@@ -80,8 +80,8 @@ def _read_stdin_from_string(text):
         sys.stdin = old_stdin
 
 
-def test_hash_comment_sets_name():
-    entries = _read_stdin_from_string("# My Point\nPOINT(1 2)\n")
+def test_double_hash_comment_sets_name():
+    entries = _read_stdin_from_string("## My Point\nPOINT(1 2)\n")
     assert len(entries) == 1
     assert entries[0].name == "My Point"
 
@@ -92,8 +92,8 @@ def test_no_comment_uses_default_name():
     assert entries[0].name == "Point 1"
 
 
-def test_double_hash_sets_group():
-    text = "## Inputs\nPOINT(1 2)\n"
+def test_single_hash_sets_group():
+    text = "# Inputs\nPOINT(1 2)\n"
     entries = _read_stdin_from_string(text)
     assert len(entries) == 1
     assert entries[0].group == "Inputs"
@@ -101,7 +101,7 @@ def test_double_hash_sets_group():
 
 
 def test_entries_before_any_group():
-    text = "POINT(1 2)\n## Group A\nPOINT(3 4)\n"
+    text = "POINT(1 2)\n# Group A\nPOINT(3 4)\n"
     entries = _read_stdin_from_string(text)
     assert entries[0].group == ""
     assert entries[0].group_index == 0
@@ -111,13 +111,13 @@ def test_entries_before_any_group():
 
 def test_full_example():
     text = (
-        "## Inputs\n"
-        "# First polygon\n"
+        "# Inputs\n"
+        "## First polygon\n"
         "POLYGON((0 0,0 5,10 5,10 0,0 0))\n"
-        "# A point\n"
+        "## A point\n"
         "POINT(1 2)\n"
-        "## Outputs\n"
-        "# Result polygon\n"
+        "# Outputs\n"
+        "## Result polygon\n"
         "POLYGON((1 1,1 4,9 4,9 1,1 1))\n"
     )
     entries = _read_stdin_from_string(text)
@@ -137,16 +137,16 @@ def test_full_example():
 
 
 def test_comment_not_adjacent_to_wkt():
-    """A # comment with a blank line before WKT should NOT name the entry."""
-    text = "# A name\n\nPOINT(1 2)\n"
+    """A ## comment with a blank line before WKT should NOT name the entry."""
+    text = "## A name\n\nPOINT(1 2)\n"
     entries = _read_stdin_from_string(text)
     assert len(entries) == 1
     assert entries[0].name == "Point 1"
 
 
-def test_double_hash_not_used_as_name():
-    """## lines define groups, not entity names."""
-    text = "## Group Name\nPOINT(1 2)\n"
+def test_single_hash_not_used_as_name():
+    """# lines define groups, not entity names."""
+    text = "# Group Name\nPOINT(1 2)\n"
     entries = _read_stdin_from_string(text)
     assert entries[0].name == "Point 1"
     assert entries[0].group == "Group Name"

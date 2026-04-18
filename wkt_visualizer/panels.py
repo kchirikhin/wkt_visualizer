@@ -6,6 +6,17 @@ from gi.repository import Gio, GObject, Gtk
 from .model import WktEntry
 
 
+def _insert_ordered(store: Gio.ListStore, entry: WktEntry):
+    """Insert entry maintaining (group_index, entry_id) ordering."""
+    key = (entry.group_index, entry.entry_id)
+    for i in range(store.get_n_items()):
+        item = store.get_item(i)
+        if (item.group_index, item.entry_id) > key:
+            store.insert(i, entry)
+            return
+    store.append(entry)
+
+
 def _create_color_swatch(entry: WktEntry) -> Gtk.DrawingArea:
     da = Gtk.DrawingArea()
     da.set_size_request(16, 16)
@@ -72,6 +83,12 @@ class GeometryPanels(Gtk.Box):
 
         self.set_size_request(260, -1)
 
+        # Detect if any entry has a group
+        self._has_groups = any(
+            displayed_store.get_item(i).group
+            for i in range(displayed_store.get_n_items())
+        )
+
         # -- Displayed list --
         displayed_label = Gtk.Label(label="Displayed")
         displayed_label.add_css_class("heading")
@@ -83,6 +100,10 @@ class GeometryPanels(Gtk.Box):
         self.displayed_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.displayed_list.bind_model(displayed_store, _create_row_widget)
         self.displayed_list.connect("row-selected", self._on_displayed_selected)
+        if self._has_groups:
+            self.displayed_list.set_header_func(
+                self._header_func, "hide"
+            )
 
         displayed_scroll = Gtk.ScrolledWindow()
         displayed_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -127,6 +148,10 @@ class GeometryPanels(Gtk.Box):
         self.hidden_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.hidden_list.bind_model(hidden_store, _create_row_widget)
         self.hidden_list.connect("row-selected", self._on_hidden_selected)
+        if self._has_groups:
+            self.hidden_list.set_header_func(
+                self._header_func, "show"
+            )
 
         hidden_scroll = Gtk.ScrolledWindow()
         hidden_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -146,7 +171,10 @@ class GeometryPanels(Gtk.Box):
     def _move_entry(self, from_store, to_store, index):
         entry = from_store.get_item(index)
         from_store.remove(index)
-        to_store.append(entry)
+        _insert_ordered(to_store, entry)
+        if self._has_groups:
+            self.displayed_list.invalidate_headers()
+            self.hidden_list.invalidate_headers()
         self._on_visibility_changed()
 
     # -- Displayed list handlers --
@@ -174,6 +202,100 @@ class GeometryPanels(Gtk.Box):
         if self.displayed_list.get_selected_row() is None:
             self._on_selection_changed(None)
 
+    # -- Group headers --
+
+    def _header_func(self, row, before, action):
+        """Add group header when group changes between rows."""
+        idx = row.get_index()
+        store = self.displayed_store if action == "hide" else self.hidden_store
+        if idx < 0 or idx >= store.get_n_items():
+            row.set_header(None)
+            return
+        entry = store.get_item(idx)
+        if not entry.group:
+            # Check if previous row had a different group
+            if before is not None:
+                prev_idx = before.get_index()
+                if 0 <= prev_idx < store.get_n_items():
+                    prev_entry = store.get_item(prev_idx)
+                    if prev_entry.group:
+                        # Transition from grouped to ungrouped — no header needed
+                        pass
+            row.set_header(None)
+            return
+
+        need_header = True
+        if before is not None:
+            prev_idx = before.get_index()
+            if 0 <= prev_idx < store.get_n_items():
+                prev_entry = store.get_item(prev_idx)
+                if prev_entry.group_index == entry.group_index:
+                    need_header = False
+
+        if not need_header:
+            row.set_header(None)
+            return
+
+        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        header_box.set_margin_start(4)
+        header_box.set_margin_end(4)
+        header_box.set_margin_top(6)
+        header_box.set_margin_bottom(2)
+
+        label = Gtk.Label(label=entry.group)
+        label.set_xalign(0)
+        label.set_hexpand(True)
+        label.add_css_class("heading")
+        header_box.append(label)
+
+        btn_label = "Hide All" if action == "hide" else "Show All"
+        btn = Gtk.Button(label=btn_label)
+        btn.add_css_class("flat")
+        gi = entry.group_index
+        if action == "hide":
+            btn.connect("clicked", lambda _b, g=gi: self._on_hide_group(g))
+        else:
+            btn.connect("clicked", lambda _b, g=gi: self._on_show_group(g))
+        header_box.append(btn)
+
+        row.set_header(header_box)
+
+    def _on_hide_group(self, group_index):
+        """Move all entries with matching group_index from displayed to hidden."""
+        to_move = []
+        for i in range(self.displayed_store.get_n_items()):
+            entry = self.displayed_store.get_item(i)
+            if entry.group_index == group_index:
+                to_move.append(entry)
+        for entry in to_move:
+            for i in range(self.displayed_store.get_n_items()):
+                if self.displayed_store.get_item(i) is entry:
+                    self.displayed_store.remove(i)
+                    _insert_ordered(self.hidden_store, entry)
+                    break
+        if to_move:
+            self.displayed_list.invalidate_headers()
+            self.hidden_list.invalidate_headers()
+            self._on_visibility_changed()
+
+    def _on_show_group(self, group_index):
+        """Move all entries with matching group_index from hidden to displayed."""
+        to_move = []
+        for i in range(self.hidden_store.get_n_items()):
+            entry = self.hidden_store.get_item(i)
+            if entry.group_index == group_index:
+                to_move.append(entry)
+        for entry in to_move:
+            for i in range(self.hidden_store.get_n_items()):
+                if self.hidden_store.get_item(i) is entry:
+                    self.hidden_store.remove(i)
+                    _insert_ordered(self.displayed_store, entry)
+                    break
+        if to_move:
+            self.displayed_list.invalidate_headers()
+            self.hidden_list.invalidate_headers()
+            self._on_visibility_changed()
+
     # -- Button handlers --
 
     def _on_hide_clicked(self, _btn):
@@ -190,12 +312,12 @@ class GeometryPanels(Gtk.Box):
         while self.displayed_store.get_n_items() > 0:
             entry = self.displayed_store.get_item(0)
             self.displayed_store.remove(0)
-            self.hidden_store.append(entry)
+            _insert_ordered(self.hidden_store, entry)
         self._on_visibility_changed()
 
     def _on_show_all_clicked(self, _btn):
         while self.hidden_store.get_n_items() > 0:
             entry = self.hidden_store.get_item(0)
             self.hidden_store.remove(0)
-            self.displayed_store.append(entry)
+            _insert_ordered(self.displayed_store, entry)
         self._on_visibility_changed()

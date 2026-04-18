@@ -19,6 +19,9 @@ class WktEntry(GObject.Object):
         wkt: str,
         geometry: BaseGeometry,
         color: tuple[float, float, float],
+        name: str = "",
+        group: str = "",
+        group_index: int = 0,
     ):
         super().__init__()
         self.entry_id = entry_id
@@ -28,7 +31,9 @@ class WktEntry(GObject.Object):
         self.color_r = color[0]
         self.color_g = color[1]
         self.color_b = color[2]
-        self.name = f"{geometry.geom_type} {entry_id + 1}"
+        self.name = name if name else f"{geometry.geom_type} {entry_id + 1}"
+        self.group = group
+        self.group_index = group_index
 
     @property
     def color(self) -> tuple[float, float, float]:

@@ -93,5 +93,8 @@ class WktVisualizerApp(Gtk.Application):
         self._entries = entries
 
     def do_activate(self):
+        settings = Gtk.Settings.get_default()
+        if settings is not None:
+            settings.set_property("gtk-icon-theme-name", "Adwaita")
         win = WktVisualizerWindow(self, self._entries)
         win.present()

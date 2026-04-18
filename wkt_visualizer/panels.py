@@ -1,9 +1,23 @@
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gio, GObject, Gtk
+from gi.repository import Gdk, Gio, GObject, Gtk
 
 from .model import WktEntry
+
+
+def _icon_or_text_button(icon_name: str, fallback_label: str, tooltip: str) -> Gtk.Button:
+    """Make an icon button if the icon resolves on the current display, else a text button."""
+    display = Gdk.Display.get_default()
+    has_icon = False
+    if display is not None:
+        has_icon = Gtk.IconTheme.get_for_display(display).has_icon(icon_name)
+    if has_icon:
+        btn = Gtk.Button.new_from_icon_name(icon_name)
+    else:
+        btn = Gtk.Button(label=fallback_label)
+    btn.set_tooltip_text(tooltip)
+    return btn
 
 
 def _insert_ordered(store: Gio.ListStore, entry: WktEntry):
@@ -75,13 +89,17 @@ class GeometryPanels(Gtk.Box):
         on_visibility_changed,
         on_selection_changed,
     ):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.hidden_store = hidden_store
         self.displayed_store = displayed_store
         self._on_visibility_changed = on_visibility_changed
         self._on_selection_changed = on_selection_changed
 
         self.set_size_request(260, -1)
+        self.set_margin_start(12)
+        self.set_margin_end(12)
+        self.set_margin_top(12)
+        self.set_margin_bottom(12)
 
         # Detect if any entry has a group
         self._has_groups = any(
@@ -92,14 +110,14 @@ class GeometryPanels(Gtk.Box):
         # -- Displayed list --
         displayed_label = Gtk.Label(label="Displayed")
         displayed_label.add_css_class("heading")
-        displayed_label.set_margin_top(4)
-        displayed_label.set_margin_bottom(2)
+        displayed_label.set_xalign(0)
         self.append(displayed_label)
 
         self.displayed_list = Gtk.ListBox()
         self.displayed_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.displayed_list.bind_model(displayed_store, _create_row_widget)
         self.displayed_list.connect("row-selected", self._on_displayed_selected)
+        self.displayed_list.add_css_class("boxed-list")
         if self._has_groups:
             self.displayed_list.set_header_func(
                 self._header_func, "hide"
@@ -108,30 +126,38 @@ class GeometryPanels(Gtk.Box):
         displayed_scroll = Gtk.ScrolledWindow()
         displayed_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         displayed_scroll.set_vexpand(True)
+        displayed_scroll.set_has_frame(True)
         displayed_scroll.set_child(self.displayed_list)
         self.append(displayed_scroll)
 
-        # -- Buttons --
-        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        button_box.set_margin_start(4)
-        button_box.set_margin_end(4)
-        button_box.set_margin_top(4)
-        button_box.set_margin_bottom(4)
+        # -- Buttons (HIG: linked transfer buttons + flat bulk actions) --
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         button_box.set_halign(Gtk.Align.CENTER)
 
-        hide_btn = Gtk.Button(label="Hide")
-        hide_btn.connect("clicked", self._on_hide_clicked)
-        button_box.append(hide_btn)
+        transfer_group = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        transfer_group.add_css_class("linked")
 
-        show_btn = Gtk.Button(label="Show")
+        hide_btn = _icon_or_text_button(
+            "view-conceal-symbolic", "Hide", "Hide selected"
+        )
+        hide_btn.connect("clicked", self._on_hide_clicked)
+        transfer_group.append(hide_btn)
+
+        show_btn = _icon_or_text_button(
+            "view-reveal-symbolic", "Show", "Show selected"
+        )
         show_btn.connect("clicked", self._on_show_clicked)
-        button_box.append(show_btn)
+        transfer_group.append(show_btn)
+
+        button_box.append(transfer_group)
 
         hide_all_btn = Gtk.Button(label="Hide All")
+        hide_all_btn.add_css_class("flat")
         hide_all_btn.connect("clicked", self._on_hide_all_clicked)
         button_box.append(hide_all_btn)
 
         show_all_btn = Gtk.Button(label="Show All")
+        show_all_btn.add_css_class("flat")
         show_all_btn.connect("clicked", self._on_show_all_clicked)
         button_box.append(show_all_btn)
 
@@ -140,14 +166,14 @@ class GeometryPanels(Gtk.Box):
         # -- Hidden list --
         hidden_label = Gtk.Label(label="Hidden")
         hidden_label.add_css_class("heading")
-        hidden_label.set_margin_top(2)
-        hidden_label.set_margin_bottom(2)
+        hidden_label.set_xalign(0)
         self.append(hidden_label)
 
         self.hidden_list = Gtk.ListBox()
         self.hidden_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.hidden_list.bind_model(hidden_store, _create_row_widget)
         self.hidden_list.connect("row-selected", self._on_hidden_selected)
+        self.hidden_list.add_css_class("boxed-list")
         if self._has_groups:
             self.hidden_list.set_header_func(
                 self._header_func, "show"
@@ -156,6 +182,7 @@ class GeometryPanels(Gtk.Box):
         hidden_scroll = Gtk.ScrolledWindow()
         hidden_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         hidden_scroll.set_vexpand(True)
+        hidden_scroll.set_has_frame(True)
         hidden_scroll.set_child(self.hidden_list)
         self.append(hidden_scroll)
 
@@ -236,11 +263,11 @@ class GeometryPanels(Gtk.Box):
             row.set_header(None)
             return
 
-        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        header_box.set_margin_start(4)
-        header_box.set_margin_end(4)
+        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        header_box.set_margin_start(6)
+        header_box.set_margin_end(6)
         header_box.set_margin_top(6)
-        header_box.set_margin_bottom(2)
+        header_box.set_margin_bottom(3)
 
         label = Gtk.Label(label=entry.group)
         label.set_xalign(0)
@@ -248,14 +275,20 @@ class GeometryPanels(Gtk.Box):
         label.add_css_class("heading")
         header_box.append(label)
 
-        btn_label = "Hide All" if action == "hide" else "Show All"
-        btn = Gtk.Button(label=btn_label)
-        btn.add_css_class("flat")
-        gi = entry.group_index
         if action == "hide":
-            btn.connect("clicked", lambda _b, g=gi: self._on_hide_group(g))
+            btn = _icon_or_text_button(
+                "view-conceal-symbolic", "Hide All", f"Hide all in “{entry.group}”"
+            )
         else:
-            btn.connect("clicked", lambda _b, g=gi: self._on_show_group(g))
+            btn = _icon_or_text_button(
+                "view-reveal-symbolic", "Show All", f"Show all in “{entry.group}”"
+            )
+        btn.add_css_class("flat")
+        gi_idx = entry.group_index
+        if action == "hide":
+            btn.connect("clicked", lambda _b, g=gi_idx: self._on_hide_group(g))
+        else:
+            btn.connect("clicked", lambda _b, g=gi_idx: self._on_show_group(g))
         header_box.append(btn)
 
         row.set_header(header_box)

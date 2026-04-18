@@ -1,5 +1,14 @@
 import logging
+import os
 import sys
+
+# Some snap-confined terminals (e.g. Ghostty) leak GDK_PIXBUF_MODULE_FILE pointing
+# at a snap-internal loaders cache that lacks the SVG loader, which silently breaks
+# every SVG-only icon (e.g. view-conceal-symbolic). Drop it so gdk-pixbuf falls
+# back to the system cache. Must happen before any GTK/Gdk import.
+_pixbuf_cache = os.environ.get("GDK_PIXBUF_MODULE_FILE", "")
+if "/snap/" in _pixbuf_cache:
+    del os.environ["GDK_PIXBUF_MODULE_FILE"]
 
 logging.basicConfig(
     stream=sys.stderr,

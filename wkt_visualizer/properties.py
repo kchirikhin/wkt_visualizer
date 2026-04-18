@@ -7,38 +7,44 @@ from gi.repository import Gdk, GObject, Gtk
 from .model import WktEntry
 
 
+def _labeled(text: str) -> Gtk.Label:
+    """Create a dimmed caption-style label for a property control."""
+    label = Gtk.Label(label=text)
+    label.add_css_class("dim-label")
+    label.add_css_class("caption-heading")
+    return label
+
+
 class PropertiesBar(Gtk.Box):
     """Bottom bar showing properties of the selected WktEntry."""
 
     def __init__(self, on_changed):
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         self._on_changed = on_changed
         self._entry = None
         self._bindings = []
         self._widget_handlers = []  # list of (widget, handler_id)
 
-        self.set_margin_start(8)
-        self.set_margin_end(8)
-        self.set_margin_top(4)
-        self.set_margin_bottom(4)
+        self.add_css_class("toolbar")
+        self.set_margin_start(12)
+        self.set_margin_end(12)
+        self.set_margin_top(6)
+        self.set_margin_bottom(6)
 
-        # Name entry
-        name_label = Gtk.Label(label="Name:")
-        self.append(name_label)
+        # Name
+        self.append(_labeled("Name"))
         self._name_entry = Gtk.Entry()
         self._name_entry.set_width_chars(16)
         self.append(self._name_entry)
 
-        # Color button
-        color_label = Gtk.Label(label="Color:")
-        self.append(color_label)
+        # Color
+        self.append(_labeled("Color"))
         self._color_btn = Gtk.ColorButton()
         self._color_btn.set_use_alpha(False)
         self.append(self._color_btn)
 
-        # Line width slider
-        width_label = Gtk.Label(label="Width:")
-        self.append(width_label)
+        # Width
+        self.append(_labeled("Width"))
         self._width_scale = Gtk.Scale.new_with_range(
             Gtk.Orientation.HORIZONTAL, 1, 10, 0.5
         )
@@ -46,9 +52,8 @@ class PropertiesBar(Gtk.Box):
         self._width_scale.set_draw_value(True)
         self.append(self._width_scale)
 
-        # Fill opacity slider
-        opacity_label = Gtk.Label(label="Opacity:")
-        self.append(opacity_label)
+        # Opacity
+        self.append(_labeled("Opacity"))
         self._opacity_scale = Gtk.Scale.new_with_range(
             Gtk.Orientation.HORIZONTAL, 0, 1, 0.05
         )
@@ -62,6 +67,7 @@ class PropertiesBar(Gtk.Box):
         self._wkt_label.set_xalign(0)
         self._wkt_label.set_ellipsize(3)  # PANGO_ELLIPSIZE_END
         self._wkt_label.set_selectable(True)
+        self._wkt_label.add_css_class("dim-label")
         self.append(self._wkt_label)
 
         self.set_visible(False)

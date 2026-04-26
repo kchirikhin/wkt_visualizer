@@ -73,10 +73,9 @@ class WktCanvas(Gtk.DrawingArea):
         self.state = CanvasState()
         self._cursor_x = 0.0
         self._cursor_y = 0.0
-        self._drag_start_x = 0.0
-        self._drag_start_y = 0.0
-        self._drag_offset_x = 0.0
-        self._drag_offset_y = 0.0
+        self._pan_active = False
+        self._pan_last_x = 0.0
+        self._pan_last_y = 0.0
 
         self.set_hexpand(True)
         self.set_vexpand(True)
@@ -90,14 +89,21 @@ class WktCanvas(Gtk.DrawingArea):
         scroll.connect("scroll", self._on_scroll)
         self.add_controller(scroll)
 
-        # Middle-click drag → pan
-        drag = Gtk.GestureDrag.new()
-        drag.set_button(2)
-        drag.connect("drag-begin", self._on_drag_begin)
-        drag.connect("drag-update", self._on_drag_update)
-        self.add_controller(drag)
+        # Middle-click press/release → toggle pan mode
+        middle_click = Gtk.GestureClick.new()
+        middle_click.set_button(2)
+        middle_click.connect("pressed", self._on_pan_pressed)
+        middle_click.connect("released", self._on_pan_released)
+        self.add_controller(middle_click)
 
-        # Motion → cursor coords
+        # Right-click press/release → toggle pan mode
+        right_click = Gtk.GestureClick.new()
+        right_click.set_button(3)
+        right_click.connect("pressed", self._on_pan_pressed)
+        right_click.connect("released", self._on_pan_released)
+        self.add_controller(right_click)
+
+        # Motion → cursor coords + pan if active
         motion = Gtk.EventControllerMotion.new()
         motion.connect("motion", self._on_motion)
         self.add_controller(motion)
@@ -150,18 +156,47 @@ class WktCanvas(Gtk.DrawingArea):
         self.queue_draw()
         return True
 
-    def _on_drag_begin(self, _gesture, start_x, start_y):
-        self._drag_start_x = start_x
-        self._drag_start_y = start_y
-        self._drag_offset_x = self.state.offset_x
-        self._drag_offset_y = self.state.offset_y
+    def _on_pan_pressed(self, _gesture, _n_press, _x, _y):
+        self._pan_active = True
 
-    def _on_drag_update(self, _gesture, offset_x, offset_y):
-        self.state.offset_x = self._drag_offset_x - offset_x / self.state.scale
-        self.state.offset_y = self._drag_offset_y + offset_y / self.state.scale
-        self.queue_draw()
+    def _on_pan_released(self, _gesture, _n_press, _x, _y):
+        self._pan_active = False
+
+    def _pan_button_still_held(self):
+        """Query the actual pointer modifier state — the gesture's
+        `released` signal is unreliable because GestureClick denies its
+        sequence on motion, so we check the live state instead."""
+        root = self.get_root()
+        if root is None:
+            return False
+        surface = root.get_surface()
+        if surface is None:
+            return False
+        seat = self.get_display().get_default_seat()
+        if seat is None:
+            return False
+        pointer = seat.get_pointer()
+        if pointer is None:
+            return False
+        pos = surface.get_device_position(pointer)
+        if not pos[0]:
+            return False
+        mods = pos[3]
+        return bool(mods & (Gdk.ModifierType.BUTTON2_MASK
+                            | Gdk.ModifierType.BUTTON3_MASK))
 
     def _on_motion(self, _ctrl, x, y):
+        if self._pan_active:
+            if self._pan_button_still_held():
+                if self.state.scale > 1e-12:
+                    dx = x - self._pan_last_x
+                    dy = y - self._pan_last_y
+                    self.state.offset_x -= dx / self.state.scale
+                    self.state.offset_y += dy / self.state.scale
+            else:
+                self._pan_active = False
+        self._pan_last_x = x
+        self._pan_last_y = y
         self._cursor_x = x
         self._cursor_y = y
         self.queue_draw()

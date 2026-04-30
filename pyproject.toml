@@ -3,7 +3,7 @@ name = "wkt-visualizer"
 version = "0.1.0"
 description = "Pipe-friendly WKT geometry visualizer with GTK 4 GUI"
 authors = []
-readme = "SPEC.md"
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"

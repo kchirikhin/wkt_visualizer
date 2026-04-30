@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
-from gi.repository import Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
 
 from .canvas import WktCanvas
 from .model import WktEntry
@@ -20,6 +22,9 @@ class WktVisualizerWindow(Gtk.ApplicationWindow):
 
         # GNOME HIG: use HeaderBar for titlebar
         header = Gtk.HeaderBar()
+        icon_img = Gtk.Image.new_from_icon_name("com.github.wkt_visualizer")
+        icon_img.set_pixel_size(20)
+        header.pack_start(icon_img)
         self.set_titlebar(header)
 
         # Stores: all entries start in displayed
@@ -101,9 +106,16 @@ class WktVisualizerApp(Gtk.Application):
         settings = Gtk.Settings.get_default()
         if settings is not None:
             settings.set_property("gtk-icon-theme-name", "Adwaita")
+
+        display = Gdk.Display.get_default()
+        icon_dir = Path(__file__).resolve().parent.parent / "data" / "icons"
+        if display is not None and icon_dir.is_dir():
+            Gtk.IconTheme.get_for_display(display).add_search_path(str(icon_dir))
+
         self.set_accels_for_action("app.quit", ["<Primary>q"])
         quit_action = Gio.SimpleAction.new("quit", None)
         quit_action.connect("activate", lambda *_: self.quit())
         self.add_action(quit_action)
         win = WktVisualizerWindow(self, self._entries)
+        win.set_icon_name("com.github.wkt_visualizer")
         win.present()

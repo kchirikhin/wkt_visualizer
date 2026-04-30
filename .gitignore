@@ -1,3 +1,6 @@
 *__pycache__*
-*.svg
+/*.svg
 .venv
+dist/
+build/
+*.egg-info/

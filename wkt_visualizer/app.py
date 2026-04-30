@@ -1,4 +1,4 @@
-from pathlib import Path
+from importlib.resources import as_file, files
 
 import gi
 
@@ -108,9 +108,10 @@ class WktVisualizerApp(Gtk.Application):
             settings.set_property("gtk-icon-theme-name", "Adwaita")
 
         display = Gdk.Display.get_default()
-        icon_dir = Path(__file__).resolve().parent.parent / "data" / "icons"
-        if display is not None and icon_dir.is_dir():
-            Gtk.IconTheme.get_for_display(display).add_search_path(str(icon_dir))
+        if display is not None:
+            icons_ref = files("wkt_visualizer").joinpath("icons")
+            with as_file(icons_ref) as icon_dir:
+                Gtk.IconTheme.get_for_display(display).add_search_path(str(icon_dir))
 
         self.set_accels_for_action("app.quit", ["<Primary>q"])
         quit_action = Gio.SimpleAction.new("quit", None)

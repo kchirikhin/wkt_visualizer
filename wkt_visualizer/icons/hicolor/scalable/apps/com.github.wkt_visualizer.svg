@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#62a0ea"/>
+      <stop offset="1" stop-color="#1a5fb4"/>
+    </linearGradient>
+    <clipPath id="rounded">
+      <rect width="128" height="128" rx="28" ry="28"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#rounded)">
+    <rect width="128" height="128" fill="url(#bg)"/>
+
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-width="1" stroke-linecap="square">
+      <path d="M16 32H112M16 48H112M16 64H112M16 80H112M16 96H112"/>
+      <path d="M32 16V112M48 16V112M64 16V112M80 16V112M96 16V112"/>
+    </g>
+
+    <path d="M64 16V112M16 64H112" stroke="#ffffff" stroke-opacity="0.32" stroke-width="1.25"/>
+
+    <g>
+      <path d="M38 86 L46 38 L88 30 L102 64 L80 102 Z"
+            fill="#ffffff" fill-opacity="0.22"
+            stroke="#ffffff" stroke-width="3.5"
+            stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="38"  cy="86"  r="5" fill="#ffffff"/>
+      <circle cx="46"  cy="38"  r="5" fill="#ffffff"/>
+      <circle cx="88"  cy="30"  r="5" fill="#ffffff"/>
+      <circle cx="102" cy="64"  r="5" fill="#ffffff"/>
+      <circle cx="80"  cy="102" r="5" fill="#ffffff"/>
+    </g>
+  </g>
+
+  <rect x="0.5" y="0.5" width="127" height="127" rx="27.5" ry="27.5"
+        fill="none" stroke="#000000" stroke-opacity="0.12"/>
+</svg>

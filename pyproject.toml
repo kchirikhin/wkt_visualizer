@@ -16,6 +16,7 @@ pytest = "^8.0"
 
 [tool.poetry.scripts]
 wkt-visualizer = "wkt_visualizer.__main__:main"
+wkt-visualizer-install-desktop = "wkt_visualizer.install_desktop:main"
 
 [build-system]
 requires = ["poetry-core"]

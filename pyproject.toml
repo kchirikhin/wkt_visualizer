@@ -2,7 +2,8 @@
 name = "wkt-visualizer"
 version = "0.1.0"
 description = "Pipe-friendly WKT geometry visualizer with GTK 4 GUI"
-authors = []
+authors = ["Konstantin Chirikhin <chirihin@gmail.com>"]
+license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
